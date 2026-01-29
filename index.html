@@ -161,6 +161,11 @@
     const iText = idx('full article text');
     const iUrl = idx('url');
 
+    // Country-level narrative summary (new)
+    const iCountrySummary =
+      idx('country narrative summary') >= 0 ? idx('country narrative summary') :
+      (idx('country summary') >= 0 ? idx('country summary') : -1);
+
     const out = {};
     if (iISO3 < 0) return out;
 
@@ -169,7 +174,29 @@
       const iso3 = (row[iISO3] || '').trim().toUpperCase();
       if (!iso3) continue;
 
-      const entry = out[iso3] || (out[iso3] = { country: (NAMES[iso3] || iso3), articles: [] });
+      const entry = out[iso3] || (out[iso3] = { country: (NAMES[iso3] || iso3), countrySummary: '', articles: [] });
+
+      // Set country summary once (first non-empty wins)
+      if (iCountrySummary >= 0 && !entry.countrySummary) {
+        const cs = (row[iCountrySummary] || '').trim();
+        if (cs) entry.countrySummary = cs;
+      }
+
+      entry.articles.push({
+        title: (row[iTitle] || '').trim(),
+        date: (row[iDate] || '').trim(),
+        source: (row[iSource] || '').trim(),
+        url: (row[iUrl] || '').trim(),
+        text: (row[iText] || '').trim()
+      });
+    }
+
+    // Sort newest-first when possible (works best if date is YYYY-MM-DD)
+    for (const iso3 of Object.keys(out)) {
+      out[iso3].articles.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    }
+    return out;
+  });
       entry.articles.push({
         title: (row[iTitle] || '').trim(),
         date: (row[iDate] || '').trim(),
@@ -306,9 +333,8 @@
     const entry = DATA[iso3];
     if (!entry) return '<div class="text">No articles found for this country.</div>';
     const arts = entry.articles || [];
-    const summary = computeCountrySummary(entry);
-
-    const list = arts.map(a => `
+    const summary = (entry.countrySummary && entry.countrySummary.trim()) ? entry.countrySummary.trim() : computeCountrySummary(entry);
+const list = arts.map(a => `
       <div class="article">
         <div class="title">${a.title || 'Untitled'}</div>
         <div class="meta">${(a.date||'') + (a.source ? ' • ' + a.source : '')}</div>
@@ -321,7 +347,7 @@
     `).join('');
 
     return `
-      <div class="summary"><strong>Summary:</strong> ${summary}</div>
+      <div class="summary"><strong>Country summary:</strong> ${summary}</div>
       ${list}
     `;
   }
