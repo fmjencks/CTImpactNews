@@ -1,0 +1,27 @@
+name: Update data from Google Sheets
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # every 10 minutes
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download CSV
+        run: |
+          curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vRp8m4bi2rqz1dEz2WskvEntzUJvVdLWHWwoW3kqF7TXt_WRlxD_v3KLgmrcNk8ak4i_USnLsIL_3M7/pub?gid=0&single=true&output=csv" \
+          -o data.csv
+
+      - name: Commit if changed
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data.csv
+            git commit -m "Auto-update data from Google Sheets"
+            git push
+          fi
