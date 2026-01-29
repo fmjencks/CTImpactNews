@@ -270,12 +270,30 @@
   function parseDateLoose(s) {
     const t = String(s || '').trim();
     if (!t) return null;
-    const m = t.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+
+    // YYYY-MM-DD or YYYY/MM/DD
+    let m = t.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
     if (m) {
       const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
       const dt = new Date(Date.UTC(y, mo, d));
       return isNaN(dt) ? null : dt;
     }
+
+    // DD.MM.YYYY or DD/MM/YYYY (common in many countries)
+    m = t.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})$/);
+    if (m) {
+      const a = Number(m[1]), b = Number(m[2]), y = Number(m[3]);
+      // Heuristic: if a > 12 => D-M-Y; if b > 12 => M-D-Y; else assume D-M-Y
+      const d = (a > 12 || b <= 12) ? a : b;
+      const mo = (a > 12 || b <= 12) ? (b - 1) : (a - 1);
+      const dt = new Date(Date.UTC(y, mo, d));
+      return isNaN(dt) ? null : dt;
+    }
+
+    // Try native parsing (handles things like "Jan 26, 2026" in most browsers)
+    const dt = new Date(t);
+    return isNaN(dt) ? null : dt;
+  }
     const dt = new Date(t);
     return isNaN(dt) ? null : dt;
   }
