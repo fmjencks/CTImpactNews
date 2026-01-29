@@ -145,7 +145,7 @@
   }
 
   function normalizeHeader(h) {
-    return String(h || '').trim().toLowerCase();
+    return String(h || '').replace(/^\uFEFF/, '').trim().toLowerCase();
   }
 
   function buildDataFromRows(rows) {
@@ -154,22 +154,54 @@
     const idx = (name) => headers.indexOf(String(name).trim().toLowerCase());
 
     // Expected headers from your CSV export
-    const iISO3 = idx('iso3');
-    const iTitle = idx('article title');
-    const iSource = idx('source');
-    const iDate = idx('article date');
-    const iText = idx('full article text');
-    const iUrl = idx('url');
+    const iISO3 = idx('iso3') >= 0 ? idx('iso3') : (idx('iso') >= 0 ? idx('iso') : -1);
+const iTitle = idx('article title') >= 0 ? idx('article title') : (idx('title') >= 0 ? idx('title') : -1);
+const iSource = idx('source') >= 0 ? idx('source') : -1;
+const iDate = idx('article date') >= 0 ? idx('article date') : (idx('date') >= 0 ? idx('date') : -1);
+const iText = idx('full article text') >= 0 ? idx('full article text') : (idx('text') >= 0 ? idx('text') : (idx('full text') >= 0 ? idx('full text') : -1));
+const iUrl = idx('url') >= 0 ? idx('url') : (idx('link') >= 0 ? idx('link') : -1);
+// Country-level narrative summary (new)
+    const iCountrySummary =
+      idx('country narrative summary') >= 0 ? idx('country narrative summary') :
+      (idx('country summary') >= 0 ? idx('country summary') : -1);
 
     const out = {};
-    if (iISO3 < 0) return out;
+    if (typeof setStatus === 'function') {
+      setStatus('Detected headers: ' + headers.slice(0, 12).join(', ') + (headers.length > 12 ? '…' : ''));
+    }
+    if (iISO3 < 0) {
+      console.error('Missing iso3 column. Detected headers:', headers);
+      return out;
+    }
 
     for (let r = 1; r < rows.length; r++) {
       const row = rows[r];
       const iso3 = (row[iISO3] || '').trim().toUpperCase();
       if (!iso3) continue;
 
-      const entry = out[iso3] || (out[iso3] = { country: (NAMES[iso3] || iso3), articles: [] });
+      const entry = out[iso3] || (out[iso3] = { country: (NAMES[iso3] || iso3), countrySummary: '', articles: [] });
+
+      // Set country summary once (first non-empty wins)
+      if (iCountrySummary >= 0 && !entry.countrySummary) {
+        const cs = (row[iCountrySummary] || '').trim();
+        if (cs) entry.countrySummary = cs;
+      }
+
+      entry.articles.push({
+        title: (row[iTitle] || '').trim(),
+        date: (row[iDate] || '').trim(),
+        source: (row[iSource] || '').trim(),
+        url: (row[iUrl] || '').trim(),
+        text: (row[iText] || '').trim()
+      });
+    }
+
+    // Sort newest-first when possible (works best if date is YYYY-MM-DD)
+    for (const iso3 of Object.keys(out)) {
+      out[iso3].articles.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    }
+    return out;
+  });
       entry.articles.push({
         title: (row[iTitle] || '').trim(),
         date: (row[iDate] || '').trim(),
@@ -306,9 +338,8 @@
     const entry = DATA[iso3];
     if (!entry) return '<div class="text">No articles found for this country.</div>';
     const arts = entry.articles || [];
-    const summary = computeCountrySummary(entry);
-
-    const list = arts.map(a => `
+    const summary = (entry.countrySummary && entry.countrySummary.trim()) ? entry.countrySummary.trim() : computeCountrySummary(entry);
+const list = arts.map(a => `
       <div class="article">
         <div class="title">${a.title || 'Untitled'}</div>
         <div class="meta">${(a.date||'') + (a.source ? ' • ' + a.source : '')}</div>
@@ -321,7 +352,7 @@
     `).join('');
 
     return `
-      <div class="summary"><strong>Summary:</strong> ${summary}</div>
+      <div class="summary"><strong>Country summary:</strong> ${summary}</div>
       ${list}
     `;
   }
