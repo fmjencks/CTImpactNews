@@ -13,8 +13,7 @@ jobs:
 
       - name: Download CSV
         run: |
-          curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vRp8m4bi2rqz1dEz2WskvEntzUJvVdLWHWwoW3kqF7TXt_WRlxD_v3KLgmrcNk8ak4i_USnLsIL_3M7/pub?gid=0&single=true&output=csv" \
-          -o data.csv
+          curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vRp8m4bi2rqz1dEz2WskvEntzUJvVdLWHWwoW3kqF7TXt_WRlxD_v3KLgmrcNk8ak4i_USnLsIL_3M7/pub?gid=0&single=true&output=csv
 
       - name: Commit if changed
         run: |
