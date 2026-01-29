@@ -6,12 +6,13 @@
 <title>Climate TRACE Impact Articles Map (Offline)</title>
 <style>
   :root {
-    --bg: #0b1020;
-    --panel: rgba(255,255,255,0.96);
-    --stroke: rgba(0,0,0,0.22);
-    --fill: rgba(255,255,255,0.10);
-    --fillHas: rgba(255,255,255,0.28);
-    --fillHover: rgba(255,255,255,0.48);
+    /* Climate TRACE-inspired palette (dark navy + teal + fresh green) */
+    --bg: #071629;
+    --panel: rgba(250,252,252,0.96);
+    --stroke: rgba(255,255,255,0.28);
+    --fill: rgba(0,179,184,0.10);
+    --fillHas: rgba(0,179,184,0.28);
+    --fillHover: rgba(102,211,110,0.45);
   }
   html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: #111; }
   #wrap { position: relative; height: 100%; }
@@ -55,6 +56,8 @@
   }
   #popup h2 { margin: 0; font-size: 16px; }
   #close { border: none; background: transparent; font-size: 20px; cursor: pointer; line-height: 1; }
+  .summary { font-size: 13px; line-height: 1.35; margin: 4px 0 12px; }
+  .summary strong{ font-weight:650; }
   .article { padding-top: 10px; margin-top: 10px; border-top: 1px solid #eee; }
   .article:first-child { border-top: none; padding-top: 0; margin-top: 0; }
   .title { font-weight: 650; font-size: 14px; }
@@ -76,7 +79,7 @@
   </svg>
 
   <div class="panel">
-    <h1>Click a country to view articles</h1>
+    <h1>Click a country to view summary + articles</h1>
     <div class="row">
       <input id="search" placeholder="Search country (e.g., Kazakhstan)"/>
       <button class="btn" id="reset">Reset</button>
@@ -241,11 +244,71 @@
     if (hasData(iso)) p.classList.add('has-data');
   });
 
+  
+  const ACTION_WORDS = [
+    ['investigat', 'investigations'],
+    ['inspect', 'inspections'],
+    ['enforc', 'enforcement'],
+    ['fine', 'fines/penalties'],
+    ['lawsuit', 'lawsuits'],
+    ['court', 'court action'],
+    ['regulat', 'regulation'],
+    ['policy', 'policy changes'],
+    ['shutdown', 'shutdowns/closures'],
+    ['permit', 'permit changes'],
+    ['monitor', 'monitoring'],
+    ['plan', 'plans/commitments']
+  ];
+
+  const SECTOR_WORDS = [
+    ['cement', 'cement'],
+    ['coal', 'coal'],
+    ['power plant', 'power generation'],
+    ['refiner', 'oil refining'],
+    ['oil', 'oil & gas'],
+    ['gas', 'oil & gas'],
+    ['steel', 'steel'],
+    ['mine', 'mining'],
+    ['landfill', 'landfills/waste'],
+    ['aviation', 'aviation'],
+    ['shipping', 'shipping'],
+    ['smelter', 'smelting'],
+    ['pipeline', 'pipelines']
+  ];
+
+  function countMatches(haystack, needle) {
+    const re = new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    const m = haystack.match(re);
+    return m ? m.length : 0;
+  }
+
+  function computeCountrySummary(entry) {
+    const arts = entry?.articles || [];
+    const corpus = arts.map(a => (a.text || '') + ' ' + (a.title || '')).join(' ').toLowerCase();
+
+    // Top sectors
+    const sectorCounts = SECTOR_WORDS.map(([k, label]) => [label, countMatches(corpus, k)]);
+    sectorCounts.sort((a,b) => b[1]-a[1]);
+    const topSectors = sectorCounts.filter(x => x[1] > 0).slice(0,2).map(x => x[0]);
+
+    // Actions
+    const actionCounts = ACTION_WORDS.map(([k, label]) => [label, countMatches(corpus, k)]);
+    actionCounts.sort((a,b) => b[1]-a[1]);
+    const topActions = actionCounts.filter(x => x[1] > 0).slice(0,3).map(x => x[0]);
+
+    const n = arts.length;
+    const sectorPhrase = topSectors.length ? `—most often tied to ${topSectors.join(' and ')}—` : '';
+    const actionPhrase = topActions.length ? `Reported follow-on actions mentioned in the coverage include ${topActions.join(', ')}.` : 'The coverage primarily uses the data to support public accountability and inform calls for mitigation; specific follow-on actions are not always described in the articles.';
+    return `Across ${n} article${n===1?'':'s'}, Climate TRACE data are used to highlight major sources of emissions and connect impacts to specific facilities or hotspots ${sectorPhrase}. ${actionPhrase}`;
+  }
+
   function popupHTML(iso3) {
     const entry = DATA[iso3];
     if (!entry) return '<div class="text">No articles found for this country.</div>';
     const arts = entry.articles || [];
-    return arts.map(a => `
+    const summary = computeCountrySummary(entry);
+
+    const list = arts.map(a => `
       <div class="article">
         <div class="title">${a.title || 'Untitled'}</div>
         <div class="meta">${(a.date||'') + (a.source ? ' • ' + a.source : '')}</div>
@@ -256,7 +319,13 @@
         <div class="link"><a href="${a.url}" target="_blank" rel="noopener">Open article</a></div>
       </div>
     `).join('');
+
+    return `
+      <div class="summary"><strong>Summary:</strong> ${summary}</div>
+      ${list}
+    `;
   }
+
 
   function openPopup(iso3) {
     const entry = DATA[iso3];
