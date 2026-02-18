@@ -85,6 +85,9 @@
     padding: 8px 10px;
     color: white;
     font-size: 12px;
+  
+    z-index: 50;
+    pointer-events: auto;
   }
   #backWorld { display:none; }
 </style>
@@ -110,6 +113,7 @@
       <div class="row">
         <input id="search" placeholder="Search country (e.g., Ireland) or US state (e.g., CA)"/>
         <button class="btn" id="reset">Reset</button>
+        <button class="btn" id="backWorldPanel" style="display:none;">Back to world</button>
       </div>
       <div class="hint" id="hint">
         • Drag this box to move it, or collapse it.<br/>
@@ -177,6 +181,7 @@
 
   const modeLabel = document.getElementById('modeLabel');
   const backWorld = document.getElementById('backWorld');
+  const backWorldPanel = document.getElementById('backWorldPanel');
 
   const defaultView = svg.getAttribute('viewBox');
 
@@ -460,6 +465,7 @@
       usLayer.style.display = 'none';
       modeLabel.textContent = 'World';
       backWorld.style.display = 'none';
+      backWorldPanel.style.display = 'none';
       hintEl.innerHTML = `
         • Drag this box to move it, or collapse it.<br/>
         • Darker teal = more articles.<br/>
@@ -474,6 +480,7 @@
       usLayer.style.display = '';
       modeLabel.textContent = 'US states';
       backWorld.style.display = '';
+      backWorldPanel.style.display = '';
       hintEl.innerHTML = `
         • You are in the US state drill-down view.<br/>
         • Search by state abbreviation (e.g., CA) or name (e.g., California). Press Enter.<br/>
@@ -564,6 +571,9 @@
     else setMode('us'); // reset US view to default extent & styles
   });
   backWorld.addEventListener('click', () => setMode('world'));
+  backWorldPanel.addEventListener('click', () => setMode('world'));
+  modeLabel.addEventListener('click', () => { if (MODE === 'us') setMode('world'); });
+
 
   // Search (Enter)
   search.addEventListener('keydown', (e) => {
