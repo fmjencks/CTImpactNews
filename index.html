@@ -6,14 +6,18 @@
 <title>Climate TRACE Impact Articles Map</title>
 <style>
   :root {
-    --bg: #071629;
-    --panel: #f7f9fa;
-    --ink: #10202f;
-    --ink-muted: #4a5a68;
-    --stroke: rgba(255,255,255,0.22);
-    --fillNone: rgba(255,255,255,0.07);
-    --recent: #4fe3ff;   /* outline for "new in the last 14 days" — a different hue from the heat ramp */
-    --hoverStroke: #ffffff;
+    /* Climate TRACE site palette (climatetrace.org) */
+    --bg: #f4f1f1;        /* trace-paper: ocean / page */
+    --panel: #ffffff;
+    --ink: #444546;       /* trace-ink */
+    --ink-strong: #2f3436;
+    --ink-muted: #6f7676; /* trace-ink-muted */
+    --night: #40494b;     /* trace-night */
+    --bone: #ebe6e6;      /* trace-surface */
+    --stroke: #ffffff;    /* country borders */
+    --fillNone: #e2ddd7;  /* "empty": no articles yet */
+    --recent: #ff6f42;    /* trace-accent: outline for "new in the last 14 days" */
+    --hoverStroke: #2f3436;
   }
   html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--ink); }
   #wrap { position: relative; height: 100%; overflow: hidden; }
@@ -29,13 +33,14 @@
     transition: fill 160ms ease, stroke 120ms ease, stroke-width 120ms ease, filter 120ms ease;
   }
   .has-data { cursor: pointer; }
-  .has-data:hover { stroke: var(--hoverStroke); stroke-width: 1.6; filter: brightness(1.15); }
+  .country[data-iso="ATA"]:not(.has-data) { display: none; } /* flat projection edge looks odd on the light background */
+  .has-data:hover { stroke: var(--hoverStroke); stroke-width: 1.6; }
   .recent { stroke: var(--recent); stroke-width: 2; }
   .recent:hover { stroke: var(--hoverStroke); stroke-width: 2.2; }
-  .marker { stroke: var(--bg); stroke-width: 1.5; }
+  .marker { stroke: #ffffff; stroke-width: 1.5; }
   .marker.recent { stroke: var(--recent); stroke-width: 2; }
   /* US drill-down: keep the world as faint context, not clickable */
-  #worldLayer.dim { opacity: 0.35; pointer-events: none; }
+  #worldLayer.dim { opacity: 0.45; pointer-events: none; }
   #worldLayer.dim [data-iso="USA"] { fill: var(--fillNone); stroke: var(--stroke); stroke-width: 0.6; }
   #worldLayer.dim .marker { display: none; }
 
@@ -43,29 +48,29 @@
   .panel {
     position: absolute; top: 14px; left: 14px; z-index: 5;
     background: var(--panel); border-radius: 14px;
-    box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+    box-shadow: 0 4px 20px rgba(64,73,75,0.16); border: 1px solid #d0c7c7;
     padding: 12px; width: min(380px, calc(100% - 28px));
     max-height: calc(100% - 28px); overflow: auto; box-sizing: border-box;
   }
   .panel-head { display:flex; align-items:center; justify-content:space-between; gap:10px; cursor: move; user-select:none; touch-action: none; }
-  .panel-head h1 { font-size: 14px; margin: 0; }
+  .panel-head h1 { font-size: 14px; margin: 0; color: var(--ink-strong); }
   #togglePanel { width: 36px; padding: 6px; }
   .panel.collapsed .panel-body { display:none; }
   .panel-body { margin-top: 10px; }
   .row { display: flex; gap: 8px; align-items: center; }
-  #search { flex: 1; min-width: 0; padding: 9px 10px; border-radius: 10px; border: 1px solid #cfd6dc; font-size: 13px; }
-  .btn { padding: 8px 10px; border-radius: 10px; border: 1px solid #cfd6dc; background: #fff; font-size: 13px; cursor: pointer; color: var(--ink); }
-  .btn:hover { background: #f1f4f6; }
+  #search { flex: 1; min-width: 0; padding: 9px 10px; border-radius: 10px; border: 1px solid #c9c7c7; font-size: 13px; color: var(--ink); }
+  .btn { padding: 8px 10px; border-radius: 10px; border: 1px solid #c9c7c7; background: #fff; font-size: 13px; cursor: pointer; color: var(--ink); }
+  .btn:hover { background: var(--bg); }
   .hint { font-size: 12px; color: var(--ink-muted); margin-top: 8px; line-height: 1.4; }
   #status { font-size: 12px; color: var(--ink-muted); margin-top: 10px; line-height: 1.4; }
-  #status.error { color: #a1261b; }
-  #searchMsg { font-size: 12px; color: #a1261b; margin-top: 6px; min-height: 0; }
+  #status.error { color: #ab4a2c; }
+  #searchMsg { font-size: 12px; color: #ab4a2c; margin-top: 6px; min-height: 0; }
   .section-label { font-size: 11px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-muted); margin: 12px 0 6px; }
   .legend { display: grid; gap: 5px; }
   .legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
   .swatch { width: 22px; height: 12px; border-radius: 3px; flex: none; }
-  .swatch.none { background: #1b2a3b; }
-  .swatch.recent { background: #1b2a3b; box-shadow: inset 0 0 0 2px var(--recent); }
+  .swatch.none { background: var(--fillNone); }
+  .swatch.recent { background: var(--fillNone); box-shadow: inset 0 0 0 2px var(--recent); }
   .legend-scale { display: flex; gap: 2px; margin-bottom: 2px; }
   .legend-scale .cell { flex: 1; height: 12px; }
   .legend-scale .cell:first-child { border-radius: 3px 0 0 3px; }
@@ -74,44 +79,44 @@
   .legend-ticks span { flex: 1; text-align: center; white-space: nowrap; }
   #top { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
   #top button { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 4px 6px; border-radius: 6px; cursor: pointer; }
-  #top button:hover, #top button:focus-visible { background: rgba(7,22,41,0.07); }
+  #top button:hover, #top button:focus-visible { background: var(--bg); }
   #top .n { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--ink-muted); }
-  .pill { font-size: 10.5px; font-weight: 650; padding: 1px 6px; border-radius: 999px; background: #d9f7fd; color: #064452; border: 1px solid #8fe6f5; white-space: nowrap; }
-  .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); }
+  .pill { font-size: 10.5px; font-weight: 650; padding: 1px 6px; border-radius: 999px; background: #ffdbd0; color: #ab4a2c; border: 1px solid #ff6f42; white-space: nowrap; }
+  .badge { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(235,230,230,0.14); border: 1px solid rgba(235,230,230,0.3); color: var(--bone); cursor: pointer; }
+  .badge:hover, .badge:focus-visible { background: rgba(235,230,230,0.28); }
 
   /* Popup */
   #popup {
     position: absolute; z-index: 6; right: 14px; top: 14px;
     width: min(540px, calc(100% - 28px));
     background: var(--panel); border-radius: 14px;
-    box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+    box-shadow: 0 4px 20px rgba(64,73,75,0.16); border: 1px solid #d0c7c7;
     padding: 12px 14px; box-sizing: border-box;
     display: none; max-height: calc(100% - 84px); overflow: auto;
   }
-  #popup .top { display: flex; justify-content: space-between; align-items: start; gap: 10px; border-bottom: 1px solid #e6eaed; padding-bottom: 8px; margin-bottom: 8px; }
-  #popup h2 { margin: 0; font-size: 16px; }
+  #popup .top { display: flex; justify-content: space-between; align-items: start; gap: 10px; border-bottom: 1px solid #ebe6e6; padding-bottom: 8px; margin-bottom: 8px; }
+  #popup h2 { margin: 0; font-size: 16px; color: var(--ink-strong); }
   #pop-sub { font-size: 12px; color: var(--ink-muted); margin-top: 3px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   #close { border: none; background: transparent; font-size: 22px; cursor: pointer; line-height: 1; color: var(--ink); }
   .summary { font-size: 13px; line-height: 1.45; margin: 4px 0 12px; white-space: pre-line; }
   .summary strong { font-weight: 650; }
-  .article { padding-top: 10px; margin-top: 10px; border-top: 1px solid #e6eaed; }
+  .article { padding-top: 10px; margin-top: 10px; border-top: 1px solid #ebe6e6; }
   .article:first-child { border-top: none; padding-top: 0; margin-top: 0; }
-  .title { font-weight: 650; font-size: 14px; line-height: 1.3; }
+  .title { font-weight: 650; font-size: 14px; line-height: 1.3; color: var(--ink-strong); }
   .title a { color: inherit; }
   .meta { font-size: 12px; color: var(--ink-muted); margin: 4px 0 6px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   details > summary { cursor: pointer; font-size: 13px; margin: 6px 0; }
   .text { font-size: 13px; line-height: 1.4; white-space: pre-wrap; }
-  .link a { font-size: 12px; }
+  .link a { font-size: 12px; color: #1d6d75; }
   .empty { font-size: 13px; color: var(--ink-muted); }
 
   /* Bottom-right mode bar */
   #modebar {
     position:absolute; right:14px; bottom:14px; z-index:5;
     display:flex; gap:8px; align-items:center;
-    background: rgba(250,252,252,0.16);
-    border: 1px solid rgba(255,255,255,0.20);
-    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    border-radius: 999px; padding: 6px 8px; color: white; font-size: 12px;
+    background: var(--night);
+    border: 1px solid var(--night);
+    border-radius: 999px; padding: 6px 8px; color: var(--bone); font-size: 12px;
   }
   #modebar .btn { padding: 5px 10px; border-radius: 999px; font-size: 12px; }
   #backWorld, #allUS { display:none; }
@@ -119,18 +124,17 @@
   /* Hover tooltip */
   #tip {
     position: absolute; z-index: 7; pointer-events: none; display: none;
-    background: rgba(7,22,41,0.94); color: #fff; border: 1px solid rgba(255,255,255,0.18);
+    background: var(--night); color: var(--bone); border: 1px solid var(--night);
     border-radius: 8px; padding: 6px 9px; font-size: 12px; line-height: 1.35; max-width: 240px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
   }
-  #tip b { font-weight: 650; }
-  #tip .muted { color: rgba(255,255,255,0.7); }
+  #tip b { font-weight: 650; color: #fff; }
+  #tip .muted { color: rgba(235,230,230,0.7); }
 
   @media (max-width: 700px) {
     .panel { width: calc(100% - 20px); left: 10px; top: 10px; }
     #popup { left: 10px; right: 10px; top: auto; bottom: 10px; width: auto; max-height: 58%; }
-    #modebar { bottom: auto; top: 10px; right: 10px; display: none; }
-    #modebar.show { display: flex; }
+    #modebar { right: 10px; bottom: 10px; }
   }
 </style>
 </head>
@@ -181,7 +185,7 @@
   </div>
 
   <div id="modebar">
-    <span class="badge" id="modeLabel">World</span>
+    <button type="button" class="badge" id="modeLabel" title="Back to the full world view">🌐 World</button>
     <button class="btn" id="allUS">All US articles</button>
     <button class="btn" id="backWorld">← Back to world</button>
   </div>
@@ -194,9 +198,9 @@
   // Paths tried in order (common GitHub Pages folder setups). data.csv is synced by the GitHub Action.
   const DATA_CSV_URLS = ["data.csv", "../data.csv"];
   const RECENT_DAYS = 14;
-  // One-hue warm heat ramp for a dark background: dark = little coverage, bright = most coverage.
-  // Lightness rises monotonically; the lowest step clears 2:1 against the background.
-  const RAMP = ['#953b17','#b44f04','#cf6a00','#e18a2b','#ebac60','#f2ce99','#ffecb9'];
+  // One-hue Climate TRACE teal ramp on the light paper background: pale = little coverage, darkest = most.
+  // Lightness falls monotonically from step to step; the hue stays on the brand teal (#1d6d75 / #56979f).
+  const RAMP = ['#9bdbe3','#65c2cd','#22a9b5','#008f9b','#00737e','#00575f','#003c41'];
 
   const WORLD_BOUNDS = {"FJI": [1190.95, 353.56, 9.05, 7.4], "TZA": [697.8, 303.17, 36.59, 35.9], "ESH": [543.12, 207.81, 27.99, 22.19], "CAN": [130.01, 60.26, 284.38, 100.82], "USA": [39.63, 62.14, 337.15, 154.26], "KAZ": [754.89, 115.38, 136.31, 49.08], "UZB": [786.43, 148.04, 57.09, 28.14], "PNG": [1070.0, 308.67, 32.67, 26.84], "IDN": [917.64, 281.73, 152.47, 48.66], "ARG": [355.28, 372.77, 65.96, 101.73], "CHL": [347.85, 358.6, 28.87, 120.92], "COD": [640.61, 282.48, 63.3, 61.71], "SOM": [736.6, 259.92, 33.77, 45.69], "KEN": [712.98, 281.65, 26.54, 33.94], "SDN": [673.12, 226.67, 54.91, 45.9], "TCD": [645.13, 221.97, 34.49, 53.29], "HTI": [351.81, 233.61, 9.23, 6.29], "DOM": [360.18, 233.72, 12.09, 7.62], "RUS": [690.96, 41.01, 509.04, 121.82], "BHS": [336.73, 209.87, 6.6, 11.1], "FLK": [396.0, 470.33, 11.5, 4.0], "GRL": [355.68, 21.18, 203.62, 78.7], "ATF": [829.07, 462.08, 6.13, 3.84], "TLS": [1016.56, 327.58, 7.89, 3.73], "ZAF": [654.48, 373.64, 54.95, 42.42], "LSO": [690.0, 395.49, 7.75, 6.66], "MEX": [209.57, 190.93, 101.06, 60.61], "URY": [405.24, 400.37, 17.39, 16.14], "BRA": [353.38, 282.52, 130.85, 130.04], "BOL": [368.03, 332.54, 40.31, 43.7], "PER": [328.63, 300.19, 42.49, 60.97], "COL": [336.7, 258.54, 40.38, 55.79], "PAN": [323.45, 267.96, 19.07, 7.97], "CRI": [313.53, 262.61, 11.32, 9.97], "NIC": [307.77, 249.95, 15.07, 14.29], "HND": [302.16, 246.65, 20.68, 10.07], "SLV": [299.68, 251.92, 7.91, 4.25], "GTM": [292.57, 240.61, 13.35, 13.61], "BLZ": [302.57, 238.38, 3.74, 8.66], "VEN": [355.65, 259.46, 45.16, 38.13], "GUY": [395.3, 272.11, 16.24, 23.66], "SUR": [406.52, 279.92, 13.62, 14.02], "ECU": [330.11, 295.4, 19.11, 21.13], "PRI": [375.86, 238.26, 5.5, 1.92], "JAM": [338.87, 238.36, 7.13, 2.64], "CUB": [316.75, 222.7, 35.99, 11.12], "ZWE": [684.21, 351.69, 25.28, 22.48], "BWA": [666.32, 359.12, 31.79, 30.31], "NAM": [639.11, 356.47, 44.48, 40.35], "SEN": [541.25, 244.67, 20.37, 14.22], "MLI": [559.43, 216.75, 54.8, 49.6], "MRT": [543.12, 208.68, 40.47, 42.6], "BEN": [602.57, 259.21, 10.09, 20.32], "NER": [600.99, 221.76, 52.02, 39.37], "NGA": [608.97, 253.78, 39.62, 32.08], "CMR": [628.3, 257.14, 25.08, 37.1], "TGO": [599.83, 263.27, 6.39, 16.97], "GHA": [589.19, 263.27, 14.34, 21.03], "CIV": [571.32, 264.92, 20.14, 20.53], "GIN": [549.57, 258.05, 24.32, 17.59], "GNB": [544.41, 257.91, 9.92, 5.29], "LBR": [561.87, 271.53, 12.9, 13.92], "SLE": [555.84, 266.51, 10.06, 10.87], "BFA": [581.76, 249.61, 25.5, 18.35], "CAF": [648.2, 262.86, 43.05, 29.58], "COG": [636.98, 287.57, 24.53, 29.22], "GAB": [629.33, 292.26, 18.75, 21.0], "GNQ": [631.02, 292.39, 6.6, 4.24], "ZMB": [672.96, 327.46, 38.66, 32.33], "MWI": [708.96, 330.77, 10.28, 25.23], "MOZ": [700.6, 334.39, 35.32, 54.75], "SWZ": [702.26, 385.53, 4.65, 5.42], "AGO": [638.8, 319.55, 41.47, 40.22], "BDI": [696.75, 307.83, 5.76, 7.17], "ISR": [714.22, 189.08, 5.18, 12.58], "LBN": [717.09, 184.52, 4.95, 5.18], "MDG": [744.18, 340.14, 24.08, 45.2], "PSE": [716.42, 191.56, 2.07, 3.93], "GMB": [543.86, 253.75, 9.99, 2.48], "TUN": [625.08, 175.5, 13.22, 23.47], "DZA": [571.05, 176.27, 68.95, 60.21], "JOR": [716.41, 188.74, 14.24, 13.94], "ARE": [771.93, 213.15, 16.06, 11.86], "QAT": [769.15, 212.95, 2.87, 5.2], "KWT": [755.23, 199.8, 6.16, 5.11], "IRQ": [729.31, 175.38, 32.58, 27.62], "OMN": [773.33, 216.92, 26.03, 27.58], "VUT": [1155.43, 348.75, 4.05, 6.58], "KHM": [941.16, 251.43, 17.56, 13.61], "THA": [924.59, 231.94, 27.37, 49.09], "LAO": [933.72, 225.12, 24.83, 28.61], "MMR": [907.68, 205.55, 29.59, 61.34], "VNM": [940.57, 222.16, 23.88, 49.17], "PRK": [1014.22, 156.72, 21.71, 17.72], "KOR": [1020.39, 171.29, 11.17, 14.08], "MNG": [892.5, 126.51, 106.74, 34.83], "IND": [827.26, 181.69, 97.42, 91.76], "BGD": [893.61, 211.84, 15.3, 19.26], "BTN": [896.05, 205.68, 10.96, 5.26], "NPL": [866.96, 198.59, 26.77, 13.42], "PAK": [802.91, 176.22, 56.55, 44.81], "AFG": [801.76, 171.71, 48.77, 30.56], "TJK": [824.81, 163.47, 25.12, 14.07], "KGZ": [831.55, 155.67, 35.98, 13.4], "TKM": [775.01, 157.49, 46.81, 24.94], "IRN": [747.03, 167.62, 64.03, 48.79], "SYR": [719.07, 175.9, 22.1, 16.39], "ARM": [745.28, 162.51, 9.74, 8.35], "SWE": [636.76, 69.65, 42.92, 45.81], "BLR": [677.33, 112.77, 31.65, 16.16], "UKR": [673.62, 125.55, 59.98, 23.47], "POL": [646.92, 117.16, 33.18, 19.42], "AUT": [631.6, 136.54, 25.0, 8.69], "HUN": [654.01, 137.92, 21.69, 9.55], "MDA": [688.73, 138.44, 11.35, 9.93], "ROU": [667.4, 139.26, 31.36, 15.11], "LTU": [670.19, 112.09, 18.44, 8.22], "LVA": [670.19, 106.77, 23.73, 7.85], "EST": [677.8, 101.3, 15.97, 7.12], "DEU": [619.96, 116.72, 30.1, 25.61], "BGR": [674.6, 152.55, 20.59, 10.0], "GRC": [667.17, 160.58, 21.51, 18.05], "TUR": [687.24, 159.87, 62.07, 20.72], "ALB": [664.35, 157.71, 5.72, 10.21], "HRV": [645.52, 144.99, 19.11, 13.41], "CHE": [620.08, 140.56, 14.73, 6.85], "LUX": [618.91, 132.91, 1.9, 2.21], "BEL": [608.38, 128.42, 12.14, 6.48], "NLD": [611.05, 121.63, 12.59, 9.02], "PRT": [568.24, 159.07, 10.46, 18.14], "ESP": [568.69, 154.17, 41.44, 26.01], "IRL": [566.74, 116.23, 13.15, 11.54], "NCL": [1146.77, 367.02, 10.3, 7.65], "SLB": [1121.64, 322.0, 19.69, 14.09], "NZL": [1155.03, 414.84, 40.03, 40.63], "AUS": [977.8, 335.56, 134.1, 94.56], "LKA": [865.65, 267.25, 6.98, 12.86], "CHN": [845.58, 121.8, 204.51, 110.59], "TWN": [1000.35, 215.68, 6.15, 11.08], "ITA": [622.5, 142.95, 39.1, 30.69], "DNK": [626.97, 107.57, 15.33, 9.76], "GBR": [579.5, 104.55, 26.11, 28.92], "ISL": [518.91, 78.24, 35.72, 10.11], "AZE": [749.91, 160.46, 18.07, 11.97], "GEO": [733.18, 154.82, 22.28, 8.3], "PHL": [999.61, 238.32, 22.18, 43.08], "MYS": [933.62, 276.91, 63.65, 20.51], "BRN": [980.68, 281.84, 4.16, 4.8], "SVN": [645.66, 143.83, 9.56, 4.66], "FIN": [668.82, 66.12, 36.23, 34.39], "SVK": [656.27, 134.76, 18.92, 6.05], "CZE": [640.8, 129.61, 22.04, 8.54], "ERI": [721.08, 240.01, 22.52, 18.47], "JPN": [1031.36, 148.16, 53.78, 48.41], "PRY": [391.05, 364.48, 27.97, 27.35], "YEM": [742.02, 236.67, 35.01, 21.21], "SAU": [715.44, 192.8, 70.12, 52.71], "ATA": [0.0, 510.9, 1200.0, 89.1], "CYP": [707.52, 181.1, 7.74, 3.66], "MAR": [543.27, 180.8, 52.98, 47.79], "EGY": [682.33, 194.71, 40.56, 31.96], "LBY": [631.06, 189.54, 52.82, 45.19], "ETH": [709.85, 250.14, 49.45, 38.45], "DJI": [738.87, 257.67, 5.52, 5.91], "UGA": [698.6, 285.83, 18.19, 18.98], "RWA": [696.75, 303.78, 5.97, 5.95], "BIH": [652.5, 149.22, 12.83, 8.61], "MKD": [668.21, 158.93, 8.3, 4.93], "SRB": [662.77, 146.09, 13.85, 13.09], "MNE": [661.5, 154.92, 6.3, 5.49], "TTO": [393.5, 263.82, 3.52, 2.55], "SSD": [679.62, 259.17, 38.04, 29.13], "NOR": [616.64, 33.17, 87.67, 73.23], "FRA": [584.69, 129.51, 42.3, 29.35], "XKX": [666.91, 155.76, 5.67, 4.75]};
   const WORLD_NAMES = {"FJI": "Fiji", "TZA": "Tanzania", "ESH": "W. Sahara", "CAN": "Canada", "USA": "United States of America", "KAZ": "Kazakhstan", "UZB": "Uzbekistan", "PNG": "Papua New Guinea", "IDN": "Indonesia", "ARG": "Argentina", "CHL": "Chile", "COD": "Dem. Rep. Congo", "SOM": "Somalia", "KEN": "Kenya", "SDN": "Sudan", "TCD": "Chad", "HTI": "Haiti", "DOM": "Dominican Rep.", "RUS": "Russia", "BHS": "Bahamas", "FLK": "Falkland Is.", "GRL": "Greenland", "ATF": "Fr. S. Antarctic Lands", "TLS": "Timor-Leste", "ZAF": "South Africa", "LSO": "Lesotho", "MEX": "Mexico", "URY": "Uruguay", "BRA": "Brazil", "BOL": "Bolivia", "PER": "Peru", "COL": "Colombia", "PAN": "Panama", "CRI": "Costa Rica", "NIC": "Nicaragua", "HND": "Honduras", "SLV": "El Salvador", "GTM": "Guatemala", "BLZ": "Belize", "VEN": "Venezuela", "GUY": "Guyana", "SUR": "Suriname", "ECU": "Ecuador", "PRI": "Puerto Rico", "JAM": "Jamaica", "CUB": "Cuba", "ZWE": "Zimbabwe", "BWA": "Botswana", "NAM": "Namibia", "SEN": "Senegal", "MLI": "Mali", "MRT": "Mauritania", "BEN": "Benin", "NER": "Niger", "NGA": "Nigeria", "CMR": "Cameroon", "TGO": "Togo", "GHA": "Ghana", "CIV": "Côte d'Ivoire", "GIN": "Guinea", "GNB": "Guinea-Bissau", "LBR": "Liberia", "SLE": "Sierra Leone", "BFA": "Burkina Faso", "CAF": "Central African Rep.", "COG": "Congo", "GAB": "Gabon", "GNQ": "Eq. Guinea", "ZMB": "Zambia", "MWI": "Malawi", "MOZ": "Mozambique", "SWZ": "eSwatini", "AGO": "Angola", "BDI": "Burundi", "ISR": "Israel", "LBN": "Lebanon", "MDG": "Madagascar", "PSE": "Palestine", "GMB": "Gambia", "TUN": "Tunisia", "DZA": "Algeria", "JOR": "Jordan", "ARE": "United Arab Emirates", "QAT": "Qatar", "KWT": "Kuwait", "IRQ": "Iraq", "OMN": "Oman", "VUT": "Vanuatu", "KHM": "Cambodia", "THA": "Thailand", "LAO": "Laos", "MMR": "Myanmar", "VNM": "Vietnam", "PRK": "North Korea", "KOR": "South Korea", "MNG": "Mongolia", "IND": "India", "BGD": "Bangladesh", "BTN": "Bhutan", "NPL": "Nepal", "PAK": "Pakistan", "AFG": "Afghanistan", "TJK": "Tajikistan", "KGZ": "Kyrgyzstan", "TKM": "Turkmenistan", "IRN": "Iran", "SYR": "Syria", "ARM": "Armenia", "SWE": "Sweden", "BLR": "Belarus", "UKR": "Ukraine", "POL": "Poland", "AUT": "Austria", "HUN": "Hungary", "MDA": "Moldova", "ROU": "Romania", "LTU": "Lithuania", "LVA": "Latvia", "EST": "Estonia", "DEU": "Germany", "BGR": "Bulgaria", "GRC": "Greece", "TUR": "Turkey", "ALB": "Albania", "HRV": "Croatia", "CHE": "Switzerland", "LUX": "Luxembourg", "BEL": "Belgium", "NLD": "Netherlands", "PRT": "Portugal", "ESP": "Spain", "IRL": "Ireland", "NCL": "New Caledonia", "SLB": "Solomon Is.", "NZL": "New Zealand", "AUS": "Australia", "LKA": "Sri Lanka", "CHN": "China", "TWN": "Taiwan", "ITA": "Italy", "DNK": "Denmark", "GBR": "United Kingdom", "ISL": "Iceland", "AZE": "Azerbaijan", "GEO": "Georgia", "PHL": "Philippines", "MYS": "Malaysia", "BRN": "Brunei", "SVN": "Slovenia", "FIN": "Finland", "SVK": "Slovakia", "CZE": "Czechia", "ERI": "Eritrea", "JPN": "Japan", "PRY": "Paraguay", "YEM": "Yemen", "SAU": "Saudi Arabia", "ATA": "Antarctica", "CYP": "Cyprus", "MAR": "Morocco", "EGY": "Egypt", "LBY": "Libya", "ETH": "Ethiopia", "DJI": "Djibouti", "UGA": "Uganda", "RWA": "Rwanda", "BIH": "Bosnia and Herz.", "MKD": "Macedonia", "SRB": "Serbia", "MNE": "Montenegro", "TTO": "Trinidad and Tobago", "SSD": "S. Sudan", "NOR": "Norway", "FRA": "France", "XKX": "Kosovo"};
@@ -647,14 +651,12 @@
     const us = MODE === 'us';
     worldLayer.classList.toggle('dim', us);
     usLayer.style.display = us ? '' : 'none';
-    modeLabel.textContent = us ? 'US states' : 'World';
-    backWorld.style.display = us ? 'inline-block' : 'none';
-    backWorldPanel.style.display = us ? 'inline-block' : 'none';
+        backWorldPanel.style.display = us ? 'inline-block' : 'none';
     allUS.style.display = us && COUNTRY.USA ? 'inline-block' : 'none';
     modebar.classList.toggle('show', us);
     hintEl.innerHTML = us
-      ? `Brighter = more articles. Click a state for its articles. Use “All US articles” for national coverage not tied to one state.`
-      : `Brighter = more articles. Click a country to read its summary and articles; click the US to see states. Small countries appear as dots.`;
+      ? `Darker = more articles. Click a state for its articles. Use “All US articles” for national coverage not tied to one state.`
+      : `Darker = more articles. Click a country to read its summary and articles; click the US to see states. Small countries appear as dots.`;
     if (us) {
       styleShapes('.state', 'state', US_STATES);
       buildTop(US_STATES, st => US_NAMES[st] || st, 's');
@@ -762,6 +764,12 @@
     search.value = ''; searchMsg.textContent = '';
     if (MODE === 'world') { closePopup(); resetView(); } else setMode('us');
   });
+  function goToWorldView() {
+    search.value = ''; searchMsg.textContent = '';
+    if (MODE === 'us') { setMode('world'); return; }
+    closePopup(); hideTip(); resetView();
+  }
+  modeLabel.addEventListener('click', goToWorldView);
   backWorld.addEventListener('click', () => setMode('world'));
   backWorldPanel.addEventListener('click', () => setMode('world'));
   allUS.addEventListener('click', showAllUS);
@@ -826,7 +834,7 @@
 
   async function loadLocalCSV() {
     setStatus('Loading data…');
-    hintEl.textContent = 'Brighter = more articles.';
+    hintEl.textContent = 'Darker = more articles.';
     try {
       const { text, lastModified } = await fetchTextWithFallback(DATA_CSV_URLS);
       DATA_INFO = { lastModified, loadedAt: new Date() };
